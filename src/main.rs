@@ -1,7 +1,9 @@
 use ggez::ContextBuilder;
 use ggez::event;
+use log::debug;
 use log::info;
 
+use crate::companion::load_companion_config;
 use crate::companion::load_config;
 use crate::core::CompanionApp;
 use crate::errors::unwrap_or_exit;
@@ -28,7 +30,7 @@ fn main() {
         .chain(std::io::stdout())
         .apply()
         .unwrap();
- 
+
     let config = unwrap_or_exit(load_config(), 1);
     info!("{:#?}", config);
 
@@ -36,17 +38,31 @@ fn main() {
     // TODO: Make a command line interface so we can spawn new process for every companion instead
     // of threads.
     config.companion.iter().for_each(|c| {
+        debug!("Loading {}", c.name);
         let (mut ctx, event_loop) = ContextBuilder::new("desktop-companion", "w1ltshire")
             .window_mode(
                 ggez::conf::WindowMode::default()
-                .transparent(true)
-                .borderless(true)
-                .dimensions(c.width, c.height),
-                )
+                    .transparent(true)
+                    .borderless(true)
+                    .dimensions(c.width, c.height),
+            )
             .build()
             .expect("Could not create ggez context");
-        let app = CompanionApp::new(&mut ctx, c.clone());
+
+        debug!("{}/config/{}/companion.toml",
+                std::env::current_dir().unwrap().to_str().unwrap(),
+                &c.path);
+
+        let companion_config = unwrap_or_exit(
+            load_companion_config(&format!(
+                "{}/config/{}/companion.toml",
+                std::env::current_dir().unwrap().to_str().unwrap(),
+                &c.path
+            )),
+            1,
+        );
+
+        let app = CompanionApp::new(&mut ctx, c.clone(), companion_config);
         event::run(ctx, event_loop, app);
     });
-
 }

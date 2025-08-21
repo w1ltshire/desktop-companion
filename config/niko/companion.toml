@@ -1,0 +1,4 @@
+[animations]
+idle = [
+    { path = "idle1.png", duration_ms = 100 },
+]
