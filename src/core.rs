@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, env::current_dir, fs, path::PathBuf, thread::current};
 
 use ggez::{
     Context, GameError, GameResult,
@@ -24,8 +24,8 @@ pub struct CompanionApp {
     frames: HashMap<String, Vec<Image>>,
 }
 
-fn read_image(ctx: &mut Context, path: String) -> Result<Image, GameError> {
-    let sprite_bytes = fs::read(&path).unwrap_or_else(|_| panic!("Failed to read file {}", &path));
+fn read_image(ctx: &mut Context, path: &str) -> Result<Image, GameError> {
+    let sprite_bytes = fs::read(path).unwrap_or_else(|_| panic!("Failed to read file {}", &path));
     Image::from_bytes(ctx, &sprite_bytes)
 }
 
@@ -41,14 +41,14 @@ impl CompanionApp {
             let images: Vec<Image> = frames
                 .iter()
                 .map(|f| {
-                    let path = format!(
-                        "{}/config/{}/{}",
-                        std::env::current_dir().unwrap().to_str().unwrap(),
-                        &companion_data.name,
-                        &f.path,
-                    );
-                    debug!("{path}");
-                    read_image(ctx, path).unwrap()
+                    let mut path = PathBuf::new();
+                    path.push(current_dir().unwrap());
+                    path.push("config");
+                    path.push(&companion_data.name);
+                    path.push(&f.path);
+
+                    debug!("{:?}", path);
+                    read_image(ctx, path.to_str().unwrap()).unwrap()
                 })
                 .collect();
             frames_map.insert(behavior.clone(), images);
