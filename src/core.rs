@@ -67,7 +67,6 @@ impl CompanionApp {
     fn draw_sprite(
         &mut self,
         sprite: &str,
-        _ctx: &mut Context,
         canvas: &mut Canvas,
     ) -> Result<(), GameError> {
         trace!("looking for sprite {sprite} in frames");
@@ -150,7 +149,7 @@ impl EventHandler for CompanionApp {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
 
-        match self.draw_sprite("idle", ctx, &mut canvas) {
+        match self.draw_sprite("idle", &mut canvas) {
             Ok(_) => {}
             Err(e) => error!("Failed to draw_sprite: {e}"),
         }
