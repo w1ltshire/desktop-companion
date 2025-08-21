@@ -1,27 +1,22 @@
-use std::{collections::HashMap, env::current_dir, fs, path::PathBuf, thread::current};
+use std::{collections::HashMap, env::current_dir, fs};
 
 use ggez::{
     Context, GameError, GameResult,
     event::{EventHandler, MouseButton},
     glam,
-    graphics::{self, Canvas, Color, DrawParam, Image},
-    winit::dpi::LogicalPosition,
+    graphics::{self, Canvas, Color, DrawParam, Image}
 };
 
 use log::{debug, error, trace};
+use rand::{rng, Rng};
 
-use std::time::Instant;
-
-use crate::companion::{Companion, CompanionConfig};
+use crate::{animation::{fall::FallAnimation, CompanionAnimations}, companion::{Companion, CompanionConfig}};
 
 pub struct CompanionApp {
     pub companion_data: Companion,
-    initialized: bool,
-    animating: bool,
-    start_time: Option<Instant>,
-    target_x: i32,
-    start_y: i32,
+    animations: CompanionAnimations,
     frames: HashMap<String, Vec<Image>>,
+    initialized: bool
 }
 
 fn read_image(ctx: &mut Context, path: &str) -> Result<Image, GameError> {
@@ -36,6 +31,7 @@ impl CompanionApp {
         companion_config: CompanionConfig,
     ) -> CompanionApp {
         let mut frames_map = HashMap::new();
+        let animations = CompanionAnimations::new();
 
         for (behavior, frames) in &companion_config.animations {
             let images: Vec<Image> = frames
@@ -55,12 +51,9 @@ impl CompanionApp {
 
         CompanionApp {
             companion_data,
-            initialized: false,
-            animating: false,
-            start_time: None,
-            target_x: 0,
-            start_y: 0,
+            animations,
             frames: frames_map,
+            initialized: false
         }
     }
 
@@ -79,59 +72,33 @@ impl CompanionApp {
         Ok(())
     }
 
-    fn move_window(&mut self, ctx: &mut Context, pos: (i32, i32)) {
-        let window = ctx.gfx.window();
-        trace!("moving");
-        window.set_outer_position(LogicalPosition::new(pos.0, pos.1));
-    }
-
-    fn start_window_animation(&mut self, ctx: &mut ggez::Context) {
-        if !self.initialized {
-            if let Some(true) = ctx.gfx.window().is_visible() {
-                let window = ctx.gfx.window();
-                if let Some(monitor) = window.current_monitor() {
-                    let dimensions = monitor.size();
-                    let mut rng = rand::rng();
-                    let max_width = dimensions
-                        .width
-                        .saturating_sub(self.companion_data.width as u32);
-                    let width = rand::Rng::random_range(&mut rng, 0..max_width) as i32;
-
-                    self.target_x = width;
-                    self.start_y = dimensions.height as i32;
-                    self.start_time = Some(Instant::now());
-                    self.animating = true;
-                }
-            }
-            self.initialized = true;
-        }
-    }
-
-    fn update_window_animation(&mut self, ctx: &mut ggez::Context) {
-        if !self.animating {
-            return;
-        }
+    fn start_fall(&mut self, ctx: &mut Context) {
         if let Some(monitor) = ctx.gfx.window().current_monitor() {
             let dimensions = monitor.size();
-            let elapsed = self.start_time.unwrap().elapsed().as_secs_f32();
-            let t = (elapsed / 0.3).min(1.0);
-            let target_y = dimensions.height - self.companion_data.height as u32;
-            let start_y = -self.companion_data.height as i32;
-            let height = ((1.0 - t) * start_y as f32 + t * target_y as f32) as i32;
+            let rand_x = rng().random_range(self.companion_data.width..dimensions.width as f32 - self.companion_data.width) as i32;
+            let start = (rand_x, -(self.companion_data.height as i32)); 
+            let end = (rand_x, (dimensions.height - self.companion_data.height as u32) as i32);
 
-            self.move_window(ctx, (self.target_x, height));
+            let fall = FallAnimation::new(start, end, 0.5);
+            self.animations.push(Box::new(fall), "fall".into());
+            self.animations.start("fall", ctx);
+                            self.animations.update(ctx);
 
-            if t >= 1.0 {
-                self.animating = false;
-            }
         }
     }
 }
 
 impl EventHandler for CompanionApp {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
-        self.start_window_animation(ctx);
-        self.update_window_animation(ctx);
+        if !self.initialized {
+            let window = ctx.gfx.window();
+            if let Some(true) = window.is_visible() {
+                self.start_fall(ctx);
+                self.initialized = true;
+            }
+        }
+
+        self.animations.update(ctx);
         Ok(())
     }
 
