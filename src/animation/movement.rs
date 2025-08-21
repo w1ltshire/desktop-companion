@@ -10,6 +10,14 @@ use crate::animation::AnimationTrait;
 
 const WALKSPEED: f32 = 5.0;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Direction {
+    Vertical,
+    Left,
+    Right,
+}
+
+#[derive(Debug)]
 pub struct MoveAnimation {
     pub start_pos: (f32, f32),
     pub end: (f32, f32),
@@ -18,6 +26,7 @@ pub struct MoveAnimation {
     pub finished: bool,
     pub sprite_frames: Vec<Image>, // multiple sprites for walking
     pub current_pos: (f32, f32),
+    pub direction: Direction,
 }
 
 impl AnimationTrait for MoveAnimation {
@@ -51,7 +60,14 @@ impl AnimationTrait for MoveAnimation {
                 % self.sprite_frames.len();
             let sprite = &self.sprite_frames[frame_index];
 
-            canvas.draw(sprite, DrawParam::default().dest(glam::vec2(0.0, 0.0)));
+            let mut param = DrawParam::default().dest(glam::vec2(0.0, 0.0));
+            if self.direction == Direction::Right {
+                param = param
+                    .scale(glam::vec2(-1.0, 1.0)) // mirror horizontally
+                    .offset(glam::vec2(1.0, 0.0)); // pivot around center
+            }
+
+            canvas.draw(sprite, param);
         }
     }
 

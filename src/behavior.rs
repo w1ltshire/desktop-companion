@@ -1,8 +1,9 @@
 use std::time::Instant;
 
+use log::debug;
 use rand::seq::IndexedMutRandom;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Behavior {
     Idle,
     WalkLeft,
@@ -25,17 +26,14 @@ impl BehaviorManager {
     }
 
     pub fn update(&mut self) -> Option<Behavior> {
-        if self.current.is_none() || self.last_change.elapsed().as_secs_f32() > 3.0 {
-            let mut choices = [
-                Behavior::Idle,
-                Behavior::WalkLeft,
-                Behavior::WalkRight,
-                Behavior::Fall,
-            ];
+        if self.current.is_none() || self.last_change.elapsed().as_secs_f32() > 10.0 {
+            let mut choices = [Behavior::Idle, Behavior::WalkLeft, Behavior::WalkRight];
 
             let mut rng = rand::rng();
             self.current = Some(*choices.choose_mut(&mut rng).unwrap());
             self.last_change = Instant::now();
+
+            debug!("ima behave >:3 {:?}", self.current);
 
             return self.current;
         }

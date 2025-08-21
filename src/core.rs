@@ -8,17 +8,22 @@ use ggez::{
 };
 
 use log::debug;
+use rand::Rng;
 
 use crate::{
     animation::{
-        AnimationTrait, CompanionAnimations, idle::IdleAnimation, movement::MoveAnimation,
+        AnimationTrait, CompanionAnimations,
+        idle::IdleAnimation,
+        movement::{Direction, MoveAnimation},
     },
+    behavior::{Behavior, BehaviorManager},
     companion::{Companion, CompanionConfig},
 };
 
 pub struct CompanionApp {
     pub companion_data: Companion,
     pub animations: CompanionAnimations,
+    pub behavior: BehaviorManager,
     frames: HashMap<String, Vec<Image>>,
     initialized: bool,
 }
@@ -64,9 +69,106 @@ impl CompanionApp {
         CompanionApp {
             companion_data,
             animations,
+            behavior: BehaviorManager::new(),
             frames: frames_map,
             initialized: false,
         }
+    }
+
+    fn initialize(&mut self, ctx: &mut Context) -> GameResult {
+        let window = ctx.gfx.window();
+        if let Some(true) = window.is_visible() {
+            let monitor_size = window
+                .current_monitor()
+                .expect("Failed to get current monitor")
+                .size();
+
+            // Place window top-center
+            self.move_window(ctx, (monitor_size.width as i32 / 2, 0));
+
+            // Create fall animation
+            let fall_animation = MoveAnimation {
+                start_pos: (monitor_size.width as f32 / 2.0, -50.0),
+                end: (
+                    monitor_size.width as f32 / 2.0,
+                    monitor_size.height as f32 - self.companion_data.height,
+                ),
+                duration: 0.6,
+                start_time: Instant::now(),
+                finished: false,
+                current_pos: (0.0, 0.0),
+                sprite_frames: vec![self.frames["idle"][0].clone()],
+                direction: Direction::Vertical,
+            };
+
+            self.start_animation(fall_animation, "fall", ctx);
+            self.initialized = true;
+        }
+        Ok(())
+    }
+
+    fn start_behavior(&mut self, ctx: &mut Context, behavior: Behavior) -> GameResult {
+        let window = ctx.gfx.window();
+        let cur_pos = ctx
+            .gfx
+            .window_position()
+            .expect("Failed to get window position");
+        let monitor_size = window
+            .current_monitor()
+            .expect("Failed to get current monitor")
+            .size();
+        let mut rng = rand::rng();
+
+        match behavior {
+            Behavior::Idle => {
+                self.animations.push(
+                    Box::new(IdleAnimation {
+                        sprite_frames: self.frames["idle"].clone(),
+                    }),
+                    "idle".into(),
+                );
+            }
+            Behavior::WalkLeft | Behavior::WalkRight => {
+                let cur_x = cur_pos.x as f32;
+
+                let max_step = 200.0;
+
+                let target_x = match behavior {
+                    Behavior::WalkLeft => {
+                        (cur_x - rng.random_range(50.0..max_step)) // step left
+                            .max(0.0)
+                    }
+                    Behavior::WalkRight => {
+                        (cur_x + rng.random_range(50.0..max_step))
+                            .min(monitor_size.width as f32 - self.companion_data.width) // step
+                                                                                        // riiiiight
+                    }
+                    _ => cur_x,
+                };
+
+                let walk_animation = MoveAnimation {
+                    start_pos: (cur_pos.x as f32, cur_pos.y as f32),
+                    end: (target_x, cur_pos.y as f32),
+                    duration: 4.0,
+                    start_time: Instant::now(),
+                    finished: false,
+                    current_pos: (cur_pos.x as f32, cur_pos.y as f32),
+                    sprite_frames: self.frames["walk"].clone(),
+                    direction: if behavior == Behavior::WalkLeft {
+                        Direction::Left
+                    } else {
+                        Direction::Right
+                    },
+                };
+
+                self.start_animation(walk_animation, "walk", ctx);
+            }
+            Behavior::Fall | Behavior::Jump => {
+                // TODO: implement
+            }
+        }
+
+        Ok(())
     }
 
     fn move_window(&mut self, ctx: &mut Context, pos: (i32, i32)) {
@@ -85,27 +187,10 @@ impl CompanionApp {
 impl EventHandler for CompanionApp {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         if !self.initialized {
-            let window = ctx.gfx.window();
-            if let Some(true) = window.is_visible() {
-                let monitor_size = window
-                    .current_monitor()
-                    .expect("Failed to get current monitor")
-                    .size();
-                self.move_window(ctx, (monitor_size.width as i32 / 2, 0));
-                let fall_animation = MoveAnimation {
-                    start_pos: (monitor_size.width as f32 / 2.0, -50.0),
-                    end: (
-                        monitor_size.width as f32 / 2.0,
-                        monitor_size.height as f32 - self.companion_data.height,
-                    ),
-                    duration: 0.6,
-                    start_time: Instant::now(),
-                    finished: false,
-                    current_pos: (0.0, 0.0),
-                    sprite_frames: vec![self.frames["idle"][0].clone()],
-                };
-                self.start_animation(fall_animation, "fall", ctx);
-                self.initialized = true;
+            self.initialize(ctx)?;
+        } else if self.animations.active.is_none() {
+            if let Some(behavior) = self.behavior.update() {
+                self.start_behavior(ctx, behavior)?;
             }
         }
 
@@ -133,6 +218,7 @@ impl EventHandler for CompanionApp {
             finished: false,
             current_pos: cur_pos.into(),
             sprite_frames: self.frames["walk"].clone(),
+            direction: Direction::Left,
         };
         self.start_animation(walk_animation, "walk", ctx);
         Ok(())
