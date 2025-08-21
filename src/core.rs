@@ -3,15 +3,16 @@ use std::{collections::HashMap, env::current_dir, fs, time::Instant};
 use ggez::{
     Context, GameError, GameResult,
     event::{EventHandler, MouseButton},
-    glam,
-    graphics::{self, Canvas, Color, DrawParam, Image},
+    graphics::{self, Color, Image},
     winit::dpi::LogicalPosition,
 };
 
-use log::{debug, error, trace};
+use log::debug;
 
 use crate::{
-    animation::{AnimationTrait, CompanionAnimations, movement::MoveAnimation},
+    animation::{
+        AnimationTrait, CompanionAnimations, idle::IdleAnimation, movement::MoveAnimation,
+    },
     companion::{Companion, CompanionConfig},
 };
 
@@ -34,7 +35,6 @@ impl CompanionApp {
         companion_config: CompanionConfig,
     ) -> CompanionApp {
         let mut frames_map = HashMap::new();
-        let animations = CompanionAnimations::new();
 
         for (behavior, frames) in &companion_config.animations {
             let images: Vec<Image> = frames
@@ -53,6 +53,14 @@ impl CompanionApp {
             frames_map.insert(behavior.clone(), images);
         }
 
+        let mut animations = CompanionAnimations::new();
+        animations.push(
+            Box::new(IdleAnimation {
+                sprite_frames: frames_map["idle"].clone(),
+            }),
+            "idle".into(),
+        );
+
         CompanionApp {
             companion_data,
             animations,
@@ -61,23 +69,16 @@ impl CompanionApp {
         }
     }
 
-    fn draw_sprite(&mut self, sprite: &str, canvas: &mut Canvas) -> Result<(), GameError> {
-        trace!("looking for sprite {sprite} in frames");
-
-        let image = &self.frames[sprite][0];
-        canvas.draw(image, DrawParam::default().dest(glam::vec2(0.0, 0.0)));
-        Ok(())
-    }
-
     fn move_window(&mut self, ctx: &mut Context, pos: (i32, i32)) {
         let window = ctx.gfx.window();
         window.set_outer_position(LogicalPosition::new(pos.0, pos.1));
     }
 
-    fn start_animation(&mut self, animation: MoveAnimation, name: &str) {
+    fn start_animation(&mut self, animation: MoveAnimation, name: &str, ctx: &mut Context) {
         let mut anim = Box::new(animation);
         anim.start();
         self.animations.push(anim, name.to_string());
+        self.animations.start(name, ctx);
     }
 }
 
@@ -97,13 +98,13 @@ impl EventHandler for CompanionApp {
                         monitor_size.width as f32 / 2.0,
                         monitor_size.height as f32 - self.companion_data.height,
                     ),
-                    duration: 0.3,
+                    duration: 0.6,
                     start_time: Instant::now(),
                     finished: false,
                     current_pos: (0.0, 0.0),
                     sprite_frames: vec![self.frames["idle"][0].clone()],
                 };
-                self.start_animation(fall_animation, "fall");
+                self.start_animation(fall_animation, "fall", ctx);
                 self.initialized = true;
             }
         }
@@ -119,7 +120,7 @@ impl EventHandler for CompanionApp {
         _x: f32,
         _y: f32,
     ) -> Result<(), GameError> {
-        debug!("mouse down");
+        debug!("mouse down {:#?}", self.animations.active);
         let cur_pos = ctx
             .gfx
             .window_position()
@@ -133,15 +134,13 @@ impl EventHandler for CompanionApp {
             current_pos: cur_pos.into(),
             sprite_frames: self.frames["walk"].clone(),
         };
-        self.start_animation(walk_animation, "walk");
+        self.start_animation(walk_animation, "walk", ctx);
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
-        for anim in self.animations.animations.iter_mut() {
-            anim.1.draw(&mut canvas);
-        }
+        self.animations.draw(ctx, &mut canvas);
         canvas.finish(ctx)
     }
 }

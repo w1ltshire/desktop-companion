@@ -22,7 +22,6 @@ pub struct Companion {
 #[derive(Debug, Deserialize, Clone)]
 pub struct Sprite {
     pub path: String,
-    pub duration_ms: f32,
 }
 
 #[derive(Debug, Deserialize, Clone)]

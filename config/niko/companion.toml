@@ -1,8 +1,8 @@
 [animations]
 idle = [
-    { path = "idle1.png", duration_ms = 100 },
+    { path = "idle1.png" },
 ]
 walk = [
-    { path = "walk1.png", duration_ms = 100 },
-    { path = "walk2.png", duration_ms = 100 }
+    { path = "walk1.png" },
+    { path = "walk2.png" }
 ]
