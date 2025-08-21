@@ -83,7 +83,7 @@ impl CompanionApp {
 
     fn move_window(&mut self, ctx: &mut Context, pos: (i32, i32)) {
         let window = ctx.gfx.window();
-        debug!("moving");
+        trace!("moving");
         window.set_outer_position(LogicalPosition::new(pos.0, pos.1));
     }
 
