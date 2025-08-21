@@ -41,11 +41,10 @@ impl CompanionApp {
             let images: Vec<Image> = frames
                 .iter()
                 .map(|f| {
-                    let mut path = PathBuf::new();
-                    path.push(current_dir().unwrap());
-                    path.push("config");
-                    path.push(&companion_data.name);
-                    path.push(&f.path);
+                    let path = current_dir().unwrap()
+                        .join("config")
+                        .join(&companion_data.name)
+                        .join(&f.path);
 
                     debug!("{:?}", path);
                     read_image(ctx, path.to_str().unwrap()).unwrap()
