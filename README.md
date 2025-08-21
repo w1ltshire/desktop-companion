@@ -3,5 +3,6 @@
 Example images provided in `config` do not belong to me.
 
 ## TODO
-- [ ] Basic functionality
+- [x] Basic functionality
+- [ ] Advanced functionality (more possible behaviors, advanced behavior algorithm)
 - [ ] Spawn all companions from `config.toml`
