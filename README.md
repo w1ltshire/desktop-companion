@@ -1,5 +1,6 @@
 # desktop-companion
-`desktop-companion` is a desktop companion application written in Rust and inspired by Shimeji.
+`desktop-companion` is a desktop companion application written in Rust and inspired by Shimeji. <br/>
+Example images provided in `config` do not belong to me.
 
 ## TODO
 - [ ] Basic functionality

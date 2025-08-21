@@ -11,8 +11,10 @@ pub struct AppConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Companion {
-    name: String,
-    path: String,
+    pub name: String,
+    pub path: String,
+    pub width: f32,
+    pub height: f32
 }
 
 pub fn load_config() -> Result<AppConfig, ConfigError> {
@@ -22,8 +24,4 @@ pub fn load_config() -> Result<AppConfig, ConfigError> {
         .unwrap();
 
     settings.try_deserialize::<AppConfig>()
-}
-
-pub fn load_companions() {
-
 }

@@ -1,9 +1,9 @@
+use std::fs;
+
 use ggez::{
-    Context, GameError, GameResult,
-    event::{EventHandler, MouseButton},
-    glam,
-    graphics::{self, Color, DrawParam},
+    event::{EventHandler, MouseButton}, glam, graphics::{self, Color, DrawParam, Image}, Context, GameError, GameResult
 };
+use log::debug;
 
 use crate::companion::Companion;
 
@@ -31,25 +31,19 @@ impl EventHandler for CompanionApp {
         _x: f32,
         _y: f32,
     ) -> Result<(), GameError> {
-        println!("mouse down");
+        debug!("mouse down");
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
-        let test = graphics::Mesh::new_rectangle(
-            ctx,
-            graphics::DrawMode::fill(),
-            graphics::Rect {
-                x: 0.0,
-                y: 0.0,
-                w: 10.0,
-                h: 10.0,
-            },
-            graphics::Color::WHITE,
-        );
+        let sprite_bytes = fs::read(
+            format!("{}/config/{}/idle.png", std::env::current_dir().unwrap().to_str().unwrap(), self.companion.path)
+        ).unwrap();
+        let image = Image::from_bytes(ctx, &sprite_bytes);
+
         canvas.draw(
-            &test.unwrap(),
+            &image.unwrap(),
             DrawParam::default().dest(glam::vec2(0.0, 0.0)),
         );
         canvas.finish(ctx)

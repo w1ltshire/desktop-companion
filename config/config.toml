@@ -1,7 +1,11 @@
 [[companion]]
 name = "niko"
 path = "niko"
+width = 96
+height = 128
 
 [[companion]]
 name = "test"
 path = "test"
+width = 96
+height = 128

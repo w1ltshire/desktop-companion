@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use ggez::ContextBuilder;
 use ggez::event;
 use log::info;
@@ -34,12 +32,16 @@ fn main() {
     let config = unwrap_or_exit(load_config(), 1);
     info!("{:#?}", config);
 
+    // `ggez` is synchronous, so at this moment we can spawn only one companion.
+    // TODO: Make a command line interface so we can spawn new process for every companion instead
+    // of threads.
     config.companion.iter().for_each(|c| {
         let (mut ctx, event_loop) = ContextBuilder::new("desktop-companion", "w1ltshire")
             .window_mode(
                 ggez::conf::WindowMode::default()
                 .transparent(true)
-                .borderless(true),
+                .borderless(true)
+                .dimensions(c.width, c.height),
                 )
             .build()
             .expect("Could not create ggez context");
