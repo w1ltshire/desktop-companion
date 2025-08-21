@@ -1,22 +1,24 @@
 use std::collections::hash_map::HashMap;
 
-use ggez::Context;
+use ggez::{Context, graphics::Canvas};
 
-pub mod fall;
+pub mod movement;
 
 pub struct CompanionAnimations {
     animations: HashMap<String, Box<dyn AnimationTrait>>,
 }
 
 pub trait AnimationTrait {
-    fn start(&mut self, ctx: &mut Context);
+    fn start(&mut self);
     fn update(&mut self, ctx: &mut Context);
+    fn draw(&self, canvas: &mut Canvas);
+    fn is_finished(&self) -> bool;
 }
 
 impl CompanionAnimations {
     pub fn new() -> Self {
         CompanionAnimations {
-            animations: HashMap::new() 
+            animations: HashMap::new(),
         }
     }
 
@@ -24,9 +26,9 @@ impl CompanionAnimations {
         self.animations.insert(name, animation);
     }
 
-    pub fn start(&mut self, name: &str, ctx: &mut Context) {
+    pub fn start(&mut self, name: &str, _ctx: &mut Context) {
         if let Some(anim) = self.animations.get_mut(name) {
-            anim.start(ctx);
+            anim.start();
         }
     }
 

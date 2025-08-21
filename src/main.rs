@@ -9,6 +9,7 @@ use crate::core::CompanionApp;
 use crate::errors::unwrap_or_exit;
 
 mod animation;
+mod behavior;
 mod companion;
 mod core;
 mod errors;

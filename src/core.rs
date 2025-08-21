@@ -1,22 +1,21 @@
-use std::{collections::HashMap, env::current_dir, fs};
+use std::{collections::HashMap, env::current_dir, fs, time::Instant};
 
 use ggez::{
-    Context, GameError, GameResult,
-    event::{EventHandler, MouseButton},
-    glam,
-    graphics::{self, Canvas, Color, DrawParam, Image}
+    event::{EventHandler, MouseButton}, glam, graphics::{self, Canvas, Color, DrawParam, Image}, winit::dpi::LogicalPosition, Context, GameError, GameResult
 };
 
 use log::{debug, error, trace};
-use rand::{rng, Rng};
 
-use crate::{animation::{fall::FallAnimation, CompanionAnimations}, companion::{Companion, CompanionConfig}};
+use crate::{
+    animation::{AnimationTrait, CompanionAnimations, movement::MoveAnimation},
+    companion::{Companion, CompanionConfig},
+};
 
 pub struct CompanionApp {
     pub companion_data: Companion,
     animations: CompanionAnimations,
     frames: HashMap<String, Vec<Image>>,
-    initialized: bool
+    initialized: bool,
 }
 
 fn read_image(ctx: &mut Context, path: &str) -> Result<Image, GameError> {
@@ -37,7 +36,8 @@ impl CompanionApp {
             let images: Vec<Image> = frames
                 .iter()
                 .map(|f| {
-                    let path = current_dir().unwrap()
+                    let path = current_dir()
+                        .unwrap()
                         .join("config")
                         .join(&companion_data.name)
                         .join(&f.path);
@@ -53,38 +53,27 @@ impl CompanionApp {
             companion_data,
             animations,
             frames: frames_map,
-            initialized: false
+            initialized: false,
         }
     }
 
-    fn draw_sprite(
-        &mut self,
-        sprite: &str,
-        canvas: &mut Canvas,
-    ) -> Result<(), GameError> {
+    fn draw_sprite(&mut self, sprite: &str, canvas: &mut Canvas) -> Result<(), GameError> {
         trace!("looking for sprite {sprite} in frames");
 
         let image = &self.frames[sprite][0];
-        canvas.draw(
-            image,
-            DrawParam::default().dest(glam::vec2(0.0, 0.0)),
-        );
+        canvas.draw(image, DrawParam::default().dest(glam::vec2(0.0, 0.0)));
         Ok(())
     }
 
-    fn start_fall(&mut self, ctx: &mut Context) {
-        if let Some(monitor) = ctx.gfx.window().current_monitor() {
-            let dimensions = monitor.size();
-            let rand_x = rng().random_range(self.companion_data.width..dimensions.width as f32 - self.companion_data.width) as i32;
-            let start = (rand_x, -(self.companion_data.height as i32)); 
-            let end = (rand_x, (dimensions.height - self.companion_data.height as u32) as i32);
+    fn move_window(&mut self, ctx: &mut Context, pos: (i32, i32)) {
+        let window = ctx.gfx.window();
+        window.set_outer_position(LogicalPosition::new(pos.0, pos.1));
+    }
 
-            let fall = FallAnimation::new(start, end, 0.5);
-            self.animations.push(Box::new(fall), "fall".into());
-            self.animations.start("fall", ctx);
-                            self.animations.update(ctx);
-
-        }
+    fn start_animation(&mut self, animation: MoveAnimation, name: &str) {
+        let mut anim = Box::new(animation);
+        anim.start();
+        self.animations.push(anim, name.to_string());
     }
 }
 
@@ -93,7 +82,18 @@ impl EventHandler for CompanionApp {
         if !self.initialized {
             let window = ctx.gfx.window();
             if let Some(true) = window.is_visible() {
-                self.start_fall(ctx);
+                let monitor_size = window.current_monitor().expect("Failed to get current monitor").size(); 
+                self.move_window(ctx, (monitor_size.width as i32 / 2, 0));
+                let fall_animation = MoveAnimation {
+                    start_pos: (monitor_size.width as f32 / 2.0, -50.0),
+                    end: (monitor_size.width as f32 / 2.0, monitor_size.height as f32 - self.companion_data.height),
+                    duration: 0.3,
+                    start_time: Instant::now(),
+                    finished: false,
+                    current_pos: (0.0, 0.0),
+                    sprite_frames: vec![self.frames["idle"][0].clone()],
+                };
+                self.start_animation(fall_animation, "fall");
                 self.initialized = true;
             }
         }
