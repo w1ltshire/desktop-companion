@@ -5,7 +5,7 @@ use ggez::{Context, graphics::Canvas};
 pub mod movement;
 
 pub struct CompanionAnimations {
-    animations: HashMap<String, Box<dyn AnimationTrait>>,
+    pub animations: HashMap<String, Box<dyn AnimationTrait>>,
 }
 
 pub trait AnimationTrait {

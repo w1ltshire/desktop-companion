@@ -8,6 +8,8 @@ use ggez::{
 
 use crate::animation::AnimationTrait;
 
+const WALKSPEED: f32 = 5.0;
+
 pub struct MoveAnimation {
     pub start_pos: (f32, f32),
     pub end: (f32, f32),
@@ -44,14 +46,13 @@ impl AnimationTrait for MoveAnimation {
     }
 
     fn draw(&self, canvas: &mut Canvas) {
-        let frame_index =
-            ((self.start_time.elapsed().as_secs_f32() * 10.0) as usize) % self.sprite_frames.len();
-        let sprite = &self.sprite_frames[frame_index];
+        if !self.is_finished() {
+            let frame_index = ((self.start_time.elapsed().as_secs_f32() * WALKSPEED) as usize)
+                % self.sprite_frames.len();
+            let sprite = &self.sprite_frames[frame_index];
 
-        canvas.draw(
-            sprite,
-            DrawParam::default().dest(glam::vec2(self.current_pos.0, self.current_pos.1)),
-        );
+            canvas.draw(sprite, DrawParam::default().dest(glam::vec2(0.0, 0.0)));
+        }
     }
 
     fn is_finished(&self) -> bool {

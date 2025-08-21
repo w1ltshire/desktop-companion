@@ -1,7 +1,11 @@
 use std::{collections::HashMap, env::current_dir, fs, time::Instant};
 
 use ggez::{
-    event::{EventHandler, MouseButton}, glam, graphics::{self, Canvas, Color, DrawParam, Image}, winit::dpi::LogicalPosition, Context, GameError, GameResult
+    Context, GameError, GameResult,
+    event::{EventHandler, MouseButton},
+    glam,
+    graphics::{self, Canvas, Color, DrawParam, Image},
+    winit::dpi::LogicalPosition,
 };
 
 use log::{debug, error, trace};
@@ -13,7 +17,7 @@ use crate::{
 
 pub struct CompanionApp {
     pub companion_data: Companion,
-    animations: CompanionAnimations,
+    pub animations: CompanionAnimations,
     frames: HashMap<String, Vec<Image>>,
     initialized: bool,
 }
@@ -82,11 +86,17 @@ impl EventHandler for CompanionApp {
         if !self.initialized {
             let window = ctx.gfx.window();
             if let Some(true) = window.is_visible() {
-                let monitor_size = window.current_monitor().expect("Failed to get current monitor").size(); 
+                let monitor_size = window
+                    .current_monitor()
+                    .expect("Failed to get current monitor")
+                    .size();
                 self.move_window(ctx, (monitor_size.width as i32 / 2, 0));
                 let fall_animation = MoveAnimation {
                     start_pos: (monitor_size.width as f32 / 2.0, -50.0),
-                    end: (monitor_size.width as f32 / 2.0, monitor_size.height as f32 - self.companion_data.height),
+                    end: (
+                        monitor_size.width as f32 / 2.0,
+                        monitor_size.height as f32 - self.companion_data.height,
+                    ),
                     duration: 0.3,
                     start_time: Instant::now(),
                     finished: false,
@@ -104,23 +114,34 @@ impl EventHandler for CompanionApp {
 
     fn mouse_button_down_event(
         &mut self,
-        _ctx: &mut Context,
+        ctx: &mut Context,
         _button: MouseButton,
         _x: f32,
         _y: f32,
     ) -> Result<(), GameError> {
         debug!("mouse down");
+        let cur_pos = ctx
+            .gfx
+            .window_position()
+            .expect("Failed to get window position");
+        let walk_animation = MoveAnimation {
+            start_pos: (cur_pos.x as f32, cur_pos.y as f32),
+            end: (100.0, cur_pos.y as f32),
+            duration: 4.0,
+            start_time: Instant::now(),
+            finished: false,
+            current_pos: cur_pos.into(),
+            sprite_frames: self.frames["walk"].clone(),
+        };
+        self.start_animation(walk_animation, "walk");
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
-
-        match self.draw_sprite("idle", &mut canvas) {
-            Ok(_) => {}
-            Err(e) => error!("Failed to draw_sprite: {e}"),
+        for anim in self.animations.animations.iter_mut() {
+            anim.1.draw(&mut canvas);
         }
-
         canvas.finish(ctx)
     }
 }
