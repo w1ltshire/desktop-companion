@@ -1,4 +1,4 @@
-use std::fs;
+use std::{collections::HashMap, fs};
 
 use ggez::{
     Context, GameError, GameResult,
@@ -16,52 +16,66 @@ use crate::companion::{Companion, CompanionConfig};
 
 pub struct CompanionApp {
     pub companion_data: Companion,
-    pub companion_config: CompanionConfig,
     initialized: bool,
     animating: bool,
     start_time: Option<Instant>,
     target_x: i32,
     start_y: i32,
+    frames: HashMap<String, Vec<Image>>,
+}
+
+fn read_image(ctx: &mut Context, path: String) -> Result<Image, GameError> {
+    let sprite_bytes = fs::read(&path).unwrap_or_else(|_| panic!("Failed to read file {}", &path));
+    Image::from_bytes(ctx, &sprite_bytes)
 }
 
 impl CompanionApp {
     pub fn new(
-        _ctx: &mut Context,
+        ctx: &mut Context,
         companion_data: Companion,
         companion_config: CompanionConfig,
     ) -> CompanionApp {
+        let mut frames_map = HashMap::new();
+
+        for (behavior, frames) in &companion_config.animations {
+            let images: Vec<Image> = frames
+                .iter()
+                .map(|f| {
+                    let path = format!(
+                        "{}/config/{}/{}",
+                        std::env::current_dir().unwrap().to_str().unwrap(),
+                        &companion_data.name,
+                        &f.path,
+                    );
+                    debug!("{path}");
+                    read_image(ctx, path).unwrap()
+                })
+                .collect();
+            frames_map.insert(behavior.clone(), images);
+        }
+
         CompanionApp {
             companion_data,
-            companion_config,
             initialized: false,
             animating: false,
             start_time: None,
             target_x: 0,
-            start_y: 0
+            start_y: 0,
+            frames: frames_map,
         }
-    }
-
-    fn read_image(&mut self, ctx: &mut Context, path: String) -> Result<Image, GameError> {
-        let sprite_bytes =
-            fs::read(&path).unwrap_or_else(|_| panic!("Failed to read file {}", &path));
-        Image::from_bytes(ctx, &sprite_bytes)
     }
 
     fn draw_sprite(
         &mut self,
         sprite: &str,
-        ctx: &mut Context,
+        _ctx: &mut Context,
         canvas: &mut Canvas,
     ) -> Result<(), GameError> {
-        let path = format!(
-            "{}/config/{}/{}",
-            std::env::current_dir().unwrap().to_str().unwrap(),
-            self.companion_data.path,
-            sprite
-        );
-        let image = self.read_image(ctx, path);
+        debug!("looking for sprite {sprite} in frames");
+
+        let image = self.frames[sprite][0].clone();
         canvas.draw(
-            &image.unwrap(),
+            &image,
             DrawParam::default().dest(glam::vec2(0.0, 0.0)),
         );
         Ok(())
@@ -80,7 +94,9 @@ impl CompanionApp {
                 if let Some(monitor) = window.current_monitor() {
                     let dimensions = monitor.size();
                     let mut rng = rand::rng();
-                    let max_width = dimensions.width.saturating_sub(self.companion_data.width as u32);
+                    let max_width = dimensions
+                        .width
+                        .saturating_sub(self.companion_data.width as u32);
                     let width = rand::Rng::random_range(&mut rng, 0..max_width) as i32;
 
                     self.target_x = width;
@@ -102,7 +118,7 @@ impl CompanionApp {
             let elapsed = self.start_time.unwrap().elapsed().as_secs_f32();
             let t = (elapsed / 0.3).min(1.0);
             let target_y = dimensions.height - self.companion_data.height as u32;
-            let start_y = -self.companion_data.height as i32; 
+            let start_y = -self.companion_data.height as i32;
             let height = ((1.0 - t) * start_y as f32 + t * target_y as f32) as i32;
 
             self.move_window(ctx, (self.target_x, height));
@@ -135,7 +151,7 @@ impl EventHandler for CompanionApp {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
 
-        match self.draw_sprite("idle1.png", ctx, &mut canvas) {
+        match self.draw_sprite("idle", ctx, &mut canvas) {
             Ok(_) => {}
             Err(e) => error!("Failed to draw_sprite: {e}"),
         }
