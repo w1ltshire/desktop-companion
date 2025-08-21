@@ -11,4 +11,5 @@ fern = { version = "0.7.1", features = ["colored", "chrono"] }
 ggez = "0.9.3"
 humantime = "2.2.0"
 log = "0.4.27"
+rand = "0.9.2"
 serde = { version = "1.0.219", features = ["derive"] }

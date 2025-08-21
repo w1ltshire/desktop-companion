@@ -853,6 +853,7 @@ dependencies = [
  "ggez",
  "humantime",
  "log",
+ "rand",
  "serde",
 ]
 

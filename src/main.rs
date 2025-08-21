@@ -49,9 +49,11 @@ fn main() {
             .build()
             .expect("Could not create ggez context");
 
-        debug!("{}/config/{}/companion.toml",
-                std::env::current_dir().unwrap().to_str().unwrap(),
-                &c.path);
+        debug!(
+            "{}/config/{}/companion.toml",
+            std::env::current_dir().unwrap().to_str().unwrap(),
+            &c.path
+        );
 
         let companion_config = unwrap_or_exit(
             load_companion_config(&format!(
