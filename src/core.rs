@@ -8,7 +8,7 @@ use ggez::{
     winit::dpi::LogicalPosition,
 };
 
-use log::{debug, error};
+use log::{debug, error, trace};
 
 use std::time::Instant;
 
@@ -71,11 +71,11 @@ impl CompanionApp {
         _ctx: &mut Context,
         canvas: &mut Canvas,
     ) -> Result<(), GameError> {
-        debug!("looking for sprite {sprite} in frames");
+        trace!("looking for sprite {sprite} in frames");
 
-        let image = self.frames[sprite][0].clone();
+        let image = &self.frames[sprite][0];
         canvas.draw(
-            &image,
+            image,
             DrawParam::default().dest(glam::vec2(0.0, 0.0)),
         );
         Ok(())
