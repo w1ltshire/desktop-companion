@@ -1,7 +1,10 @@
 use std::{collections::HashMap, env::current_dir, fs, time::Instant};
 
 use ggez::{
-    event::{EventHandler, MouseButton}, graphics::{self, Color, Image}, winit::dpi::{LogicalPosition, PhysicalSize}, Context, GameError, GameResult
+    Context, GameError, GameResult,
+    event::{EventHandler, MouseButton},
+    graphics::{self, Color, Image},
+    winit::dpi::{LogicalPosition, PhysicalSize},
 };
 
 use log::debug;
@@ -38,10 +41,12 @@ impl CompanionApp {
         companion_config: CompanionConfig,
     ) -> CompanionApp {
         let mut frames_map = HashMap::new();
-        let monitor_size = ctx.gfx.window()
-                .current_monitor()
-                .expect("Failed to get current monitor")
-                .size();
+        let monitor_size = ctx
+            .gfx
+            .window()
+            .current_monitor()
+            .expect("Failed to get current monitor")
+            .size();
 
         for (behavior, frames) in &companion_config.animations {
             let images: Vec<Image> = frames
@@ -87,7 +92,7 @@ impl CompanionApp {
                 start_pos: (self.monitor_size.width as f32 / 2.0, -50.0),
                 end: (
                     self.monitor_size.width as f32 / 2.0,
-                    self.monitor_size.height as f32 - self.companion_data.height, 
+                    self.monitor_size.height as f32 - self.companion_data.height,
                 ),
                 duration: 0.6,
                 start_time: Instant::now(),
@@ -133,18 +138,28 @@ impl CompanionApp {
                     Behavior::WalkRight => {
                         (cur_x + rng.random_range(50.0..max_step))
                             .min(self.monitor_size.width as f32 - self.companion_data.width) // step
-                                                                                        // riiiiight
+                                                                                             // riiiiight
                     }
                     _ => cur_x,
                 };
+                let duration = if 50.0 > 0.0 {
+                    ((target_x - cur_x).abs() / 50.0).max(0.1) // here we use .abs() to get modulus
+                                                               // of distance because it can be
+                                                               // negative if we're walking left 
+                } else {
+                    0.5
+                };
 
-                debug!("max_step {max_step} target_x {target_x} cur_x {cur_x} step {} duration {}", cur_x - target_x, (target_x / cur_x) * 5.0);
+                debug!(
+                    "max_step {max_step} target_x {target_x} cur_x {cur_x} step {} duration {}",
+                    cur_x - target_x,
+                    duration
+                );
 
                 let walk_animation = MoveAnimation {
                     start_pos: (cur_pos.x as f32, cur_pos.y as f32),
                     end: (target_x, cur_pos.y as f32),
-                    duration: (target_x / cur_x) * 5.0, // divide target position by current
-                                                        // position and multiply by walkspeed
+                    duration,
                     start_time: Instant::now(),
                     finished: false,
                     current_pos: (cur_pos.x as f32, cur_pos.y as f32),
