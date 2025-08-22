@@ -14,6 +14,7 @@ pub enum Behavior {
 
 pub struct BehaviorManager {
     current: Option<Behavior>,
+    previous: Option<Behavior>,
     last_change: Instant,
 }
 
@@ -21,6 +22,7 @@ impl BehaviorManager {
     pub fn new() -> Self {
         Self {
             current: None,
+            previous: None,
             last_change: Instant::now(),
         }
     }

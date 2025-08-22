@@ -1,10 +1,7 @@
 use std::{collections::HashMap, env::current_dir, fs, time::Instant};
 
 use ggez::{
-    Context, GameError, GameResult,
-    event::{EventHandler, MouseButton},
-    graphics::{self, Color, Image},
-    winit::dpi::LogicalPosition,
+    event::{EventHandler, MouseButton}, graphics::{self, Color, Image}, winit::dpi::{LogicalPosition, PhysicalSize}, Context, GameError, GameResult
 };
 
 use log::debug;
@@ -24,6 +21,7 @@ pub struct CompanionApp {
     pub companion_data: Companion,
     pub animations: CompanionAnimations,
     pub behavior: BehaviorManager,
+    pub monitor_size: PhysicalSize<u32>,
     frames: HashMap<String, Vec<Image>>,
     initialized: bool,
 }
@@ -40,6 +38,10 @@ impl CompanionApp {
         companion_config: CompanionConfig,
     ) -> CompanionApp {
         let mut frames_map = HashMap::new();
+        let monitor_size = ctx.gfx.window()
+                .current_monitor()
+                .expect("Failed to get current monitor")
+                .size();
 
         for (behavior, frames) in &companion_config.animations {
             let images: Vec<Image> = frames
@@ -70,6 +72,7 @@ impl CompanionApp {
             companion_data,
             animations,
             behavior: BehaviorManager::new(),
+            monitor_size,
             frames: frames_map,
             initialized: false,
         }
@@ -78,20 +81,13 @@ impl CompanionApp {
     fn initialize(&mut self, ctx: &mut Context) -> GameResult {
         let window = ctx.gfx.window();
         if let Some(true) = window.is_visible() {
-            let monitor_size = window
-                .current_monitor()
-                .expect("Failed to get current monitor")
-                .size();
+            self.move_window(ctx, (self.monitor_size.width as i32 / 2, 0));
 
-            // Place window top-center
-            self.move_window(ctx, (monitor_size.width as i32 / 2, 0));
-
-            // Create fall animation
             let fall_animation = MoveAnimation {
-                start_pos: (monitor_size.width as f32 / 2.0, -50.0),
+                start_pos: (self.monitor_size.width as f32 / 2.0, -50.0),
                 end: (
-                    monitor_size.width as f32 / 2.0,
-                    monitor_size.height as f32 - self.companion_data.height,
+                    self.monitor_size.width as f32 / 2.0,
+                    self.monitor_size.height as f32 - self.companion_data.height, 
                 ),
                 duration: 0.6,
                 start_time: Instant::now(),
@@ -108,15 +104,11 @@ impl CompanionApp {
     }
 
     fn start_behavior(&mut self, ctx: &mut Context, behavior: Behavior) -> GameResult {
-        let window = ctx.gfx.window();
         let cur_pos = ctx
             .gfx
             .window_position()
             .expect("Failed to get window position");
-        let monitor_size = window
-            .current_monitor()
-            .expect("Failed to get current monitor")
-            .size();
+
         let mut rng = rand::rng();
 
         match behavior {
@@ -140,16 +132,19 @@ impl CompanionApp {
                     }
                     Behavior::WalkRight => {
                         (cur_x + rng.random_range(50.0..max_step))
-                            .min(monitor_size.width as f32 - self.companion_data.width) // step
+                            .min(self.monitor_size.width as f32 - self.companion_data.width) // step
                                                                                         // riiiiight
                     }
                     _ => cur_x,
                 };
 
+                debug!("max_step {max_step} target_x {target_x} cur_x {cur_x} step {} duration {}", cur_x - target_x, (target_x / cur_x) * 5.0);
+
                 let walk_animation = MoveAnimation {
                     start_pos: (cur_pos.x as f32, cur_pos.y as f32),
                     end: (target_x, cur_pos.y as f32),
-                    duration: 4.0,
+                    duration: (target_x / cur_x) * 5.0, // divide target position by current
+                                                        // position and multiply by walkspeed
                     start_time: Instant::now(),
                     finished: false,
                     current_pos: (cur_pos.x as f32, cur_pos.y as f32),
