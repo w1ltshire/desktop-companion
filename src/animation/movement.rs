@@ -1,10 +1,10 @@
-use std::time::Instant;
+use crate::animation::AnimationTrait;
 use ggez::{
     Context, glam,
     graphics::{Canvas, DrawParam, Image},
     winit::dpi::LogicalPosition,
 };
-use crate::animation::AnimationTrait;
+use std::time::Instant;
 
 /// Speed multiplier for walking animation frames.
 const WALKSPEED: f32 = 5.0;

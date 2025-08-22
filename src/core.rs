@@ -1,7 +1,13 @@
 use std::{collections::HashMap, env::current_dir, fs, time::Instant};
 
 use ggez::{
-    event::{EventHandler, MouseButton}, graphics::{self, Color, Image}, winit::{self, dpi::{LogicalPosition, PhysicalSize}}, Context, GameError, GameResult
+    Context, GameError, GameResult,
+    event::{EventHandler, MouseButton},
+    graphics::{self, Color, Image},
+    winit::{
+        self,
+        dpi::{LogicalPosition, PhysicalPosition, PhysicalSize},
+    },
 };
 
 use log::debug;
@@ -22,8 +28,11 @@ pub struct CompanionApp {
     pub animations: CompanionAnimations,
     pub behavior: BehaviorManager,
     pub monitor_size: PhysicalSize<u32>,
-    frames: HashMap<String, Vec<Image>>,
-    initialized: bool,
+    pub dragging: bool,
+    pub drag_coords: (f32, f32),
+    pub window_start: (f32, f32),
+    pub frames: HashMap<String, Vec<Image>>,
+    pub initialized: bool,
 }
 
 fn read_image(ctx: &mut Context, path: &str) -> Result<Image, GameError> {
@@ -71,10 +80,11 @@ impl CompanionApp {
         CompanionApp {
             companion_data,
             animations,
-            behavior: BehaviorManager::new(
-                ctx.gfx.window() as *const winit::window::Window
-            ),
+            behavior: BehaviorManager::new(ctx.gfx.window() as *const winit::window::Window),
             monitor_size,
+            dragging: false,
+            drag_coords: (0.0, 0.0),
+            window_start: (0.0, 0.0),
             frames: frames_map,
             initialized: false,
         }
@@ -201,33 +211,68 @@ impl EventHandler for CompanionApp {
             }
         }
 
-        self.animations.update(ctx);
+        if !self.dragging { self.animations.update(ctx); }
         Ok(())
     }
 
     fn mouse_button_down_event(
         &mut self,
         ctx: &mut Context,
+        button: MouseButton,
+        x: f32,
+        y: f32,
+    ) -> Result<(), GameError> {
+        if button == MouseButton::Left {
+            self.animations.start("idle", ctx);
+            if let Ok(window_pos) = ctx.gfx.window_position() {
+                let mouse_screen = PhysicalPosition::new(
+                    x as f64 + window_pos.x as f64,
+                    y as f64 + window_pos.y as f64,
+                );
+                self.drag_coords = (mouse_screen.x as f32, mouse_screen.y as f32);
+                self.window_start = (window_pos.x as f32, window_pos.y as f32);
+                self.dragging = true;
+            }
+        }
+        Ok(())
+    }
+
+    fn mouse_motion_event(
+        &mut self,
+        ctx: &mut Context,
+        x: f32,
+        y: f32,
+        _dx: f32,
+        _dy: f32,
+    ) -> Result<(), GameError> {
+        if self.dragging {
+            let window = ctx.gfx.window();
+            if let Ok(window_pos) = window.outer_position() {
+                let mouse_screen = PhysicalPosition::new(
+                    x as f64 + window_pos.x as f64,
+                    y as f64 + window_pos.y as f64,
+                );
+
+                let dx = mouse_screen.x - self.drag_coords.0 as f64;
+                let dy = mouse_screen.y - self.drag_coords.1 as f64;
+
+                let new_x = self.window_start.0 as f64 + dx;
+                let new_y = self.window_start.1 as f64 + dy;
+
+                window.set_outer_position(PhysicalPosition::new(new_x, new_y));
+            }
+        }
+        Ok(())
+    }
+
+    fn mouse_button_up_event(
+        &mut self,
+        _ctx: &mut Context,
         _button: MouseButton,
         _x: f32,
         _y: f32,
     ) -> Result<(), GameError> {
-        debug!("mouse down {:#?}", self.animations.active);
-        let cur_pos = ctx
-            .gfx
-            .window_position()
-            .expect("Failed to get window position");
-        let walk_animation = MoveAnimation {
-            start_pos: (cur_pos.x as f32, cur_pos.y as f32),
-            end: (100.0, cur_pos.y as f32),
-            duration: 4.0,
-            start_time: Instant::now(),
-            finished: false,
-            current_pos: cur_pos.into(),
-            sprite_frames: self.frames["walk"].clone(),
-            direction: Direction::Left,
-        };
-        self.start_animation(walk_animation, "walk", ctx);
+        self.dragging = false;
         Ok(())
     }
 

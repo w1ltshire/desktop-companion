@@ -13,7 +13,7 @@ use std::time::Instant;
 
 use ggez::winit;
 use log::debug;
-use rand::distr::{weighted::WeightedIndex, Distribution};
+use rand::distr::{Distribution, weighted::WeightedIndex};
 
 /// Possible behaviors for the companion character.
 ///
@@ -42,7 +42,7 @@ pub struct BehaviorManager {
     current: Option<Behavior>,
     previous: Option<Behavior>,
     last_change: Instant,
-    window: *const winit::window::Window
+    window: *const winit::window::Window,
 }
 
 /// Simplified type for [`TRANSITIONS`]
@@ -87,7 +87,7 @@ impl BehaviorManager {
     /// Creates a new [`BehaviorManager'] associated with the companions [`winit::winit::Window`].
     ///
     /// Initially, both `current` and `previous` are None.
-    /// 
+    ///
     /// # Safety
     /// The caller must ensure that the provided [`winit::winit::Window`] pointer is non-null and
     /// remains valid for the lifetime of the manager
@@ -96,7 +96,7 @@ impl BehaviorManager {
             current: None,
             previous: None,
             last_change: Instant::now(),
-            window
+            window,
         }
     }
 
@@ -113,7 +113,11 @@ impl BehaviorManager {
             self.current = Some(self.pick_behavior_random());
             self.last_change = Instant::now();
 
-            debug!("ima behave >:3 {:?} also have this window size so i could test my pOiNtErS {:?}", self.current, unsafe { (*self.window).outer_size() });
+            debug!(
+                "ima behave >:3 {:?} also have this window size so i could test my pOiNtErS {:?}",
+                self.current,
+                unsafe { (*self.window).outer_size() }
+            );
 
             return self.current;
         }

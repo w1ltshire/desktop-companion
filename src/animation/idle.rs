@@ -49,4 +49,3 @@ impl AnimationTrait for IdleAnimation {
         true
     }
 }
-

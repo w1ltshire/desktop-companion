@@ -3,9 +3,9 @@
 //! It provides structures representing companions, their sprites, and animation configurations,
 //! as well as functions to load configuration from TOML files.
 
-use std::collections::HashMap;
 use config::{Config, ConfigError};
 use serde::Deserialize;
+use std::collections::HashMap;
 
 /// Root application configuration containing all companions.
 #[derive(Debug, Deserialize)]
@@ -73,4 +73,3 @@ pub fn load_companion_config(path: &str) -> Result<CompanionConfig, ConfigError>
 
     settings.try_deserialize::<CompanionConfig>()
 }
-

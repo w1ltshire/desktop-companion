@@ -1,5 +1,5 @@
-use std::collections::hash_map::HashMap;
 use ggez::{Context, graphics::Canvas};
+use std::collections::hash_map::HashMap;
 
 pub mod idle;
 pub mod movement;
