@@ -1,13 +1,10 @@
 use std::{collections::HashMap, env::current_dir, fs, time::Instant};
 
 use ggez::{
-    Context, GameError, GameResult,
-    event::{EventHandler, MouseButton},
-    graphics::{self, Color, Image},
-    winit::{
+    event::{EventHandler, MouseButton}, graphics::{self, Color, Image}, winit::{
         self,
-        dpi::{LogicalPosition, PhysicalPosition, PhysicalSize},
-    },
+        dpi::{LogicalPosition, PhysicalPosition, PhysicalSize}, window,
+    }, Context, GameError, GameResult
 };
 
 use log::debug;
@@ -68,7 +65,7 @@ impl CompanionApp {
                     read_image(ctx, path.to_str().unwrap()).unwrap()
                 })
                 .collect();
-            frames_map.insert(behavior.clone(), images);
+            frames_map.insert(behavior.to_string(), images);
         }
         let mut animations = CompanionAnimations::new();
         animations.push(
@@ -267,12 +264,30 @@ impl EventHandler for CompanionApp {
 
     fn mouse_button_up_event(
         &mut self,
-        _ctx: &mut Context,
+        ctx: &mut Context,
         _button: MouseButton,
         _x: f32,
         _y: f32,
     ) -> Result<(), GameError> {
         self.dragging = false;
+        let window = ctx.gfx.window();
+        if window.outer_position().expect("Failed to get window outer_position").y != 0 {
+            let fall_animation = MoveAnimation {
+                start_pos: (window.outer_position().unwrap().x as f32, window.outer_position().unwrap().y as f32),
+                end: (
+                    window.outer_position().unwrap().x as f32,
+                    self.monitor_size.height as f32 - self.companion_data.height,
+                ),
+                duration: 0.6,
+                start_time: Instant::now(),
+                finished: false,
+                current_pos: (0.0, 0.0),
+                sprite_frames: vec![self.frames["idle"][0].clone()],
+                direction: Direction::Vertical,
+            };
+
+            self.start_animation(fall_animation, "fall", ctx);
+        }
         Ok(())
     }
 
