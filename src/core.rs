@@ -1,10 +1,7 @@
 use std::{collections::HashMap, env::current_dir, fs, time::Instant};
 
 use ggez::{
-    Context, GameError, GameResult,
-    event::{EventHandler, MouseButton},
-    graphics::{self, Color, Image},
-    winit::dpi::{LogicalPosition, PhysicalSize},
+    event::{EventHandler, MouseButton}, graphics::{self, Color, Image}, winit::{self, dpi::{LogicalPosition, PhysicalSize}}, Context, GameError, GameResult
 };
 
 use log::debug;
@@ -64,7 +61,6 @@ impl CompanionApp {
                 .collect();
             frames_map.insert(behavior.clone(), images);
         }
-
         let mut animations = CompanionAnimations::new();
         animations.push(
             Box::new(IdleAnimation {
@@ -72,11 +68,12 @@ impl CompanionApp {
             }),
             "idle".into(),
         );
-
         CompanionApp {
             companion_data,
             animations,
-            behavior: BehaviorManager::new(),
+            behavior: BehaviorManager::new(
+                ctx.gfx.window() as *const winit::window::Window
+            ),
             monitor_size,
             frames: frames_map,
             initialized: false,
@@ -138,14 +135,14 @@ impl CompanionApp {
                     Behavior::WalkRight => {
                         (cur_x + rng.random_range(50.0..max_step))
                             .min(self.monitor_size.width as f32 - self.companion_data.width) // step
-                                                                                             // riiiiight
+                        // riiiiight
                     }
                     _ => cur_x,
                 };
                 let duration = if self.companion_data.walkspeed > 0.0 {
-                    ((target_x - cur_x).abs() / self.companion_data.walkspeed).max(0.1) // here we use .abs() to get modulus
-                                                               // of distance because it can be
-                                                               // negative if we're walking left 
+                    // here we use .abs() to get modulus of distance because it can be
+                    // negative if we're walking left
+                    ((target_x - cur_x).abs() / self.companion_data.walkspeed).max(0.1)
                 } else {
                     0.5
                 };

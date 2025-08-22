@@ -46,7 +46,7 @@ impl CompanionAnimations {
             };
 
             if finished {
-                self.active = None; // animation finished -> no active
+                self.active = None;
             }
         }
     }
