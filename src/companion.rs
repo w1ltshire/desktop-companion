@@ -17,6 +17,7 @@ pub struct Companion {
     pub path: String,
     pub width: f32,
     pub height: f32,
+    pub walkspeed: f32
 }
 
 #[derive(Debug, Deserialize, Clone)]

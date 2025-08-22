@@ -142,7 +142,7 @@ impl CompanionApp {
                     }
                     _ => cur_x,
                 };
-                let duration = if 50.0 > 0.0 {
+                let duration = if self.companion_data.walkspeed > 0.0 {
                     ((target_x - cur_x).abs() / 50.0).max(0.1) // here we use .abs() to get modulus
                                                                // of distance because it can be
                                                                // negative if we're walking left 
