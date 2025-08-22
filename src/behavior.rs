@@ -1,10 +1,27 @@
+//! Module `behavior_manager` handles the companion's behavior selection.
+//!
+//! This module is internal and manages:
+//! - Tracking current and previous behaviors
+//! - Timing updates to avoid rapid behavior changes
+//! - Picking behaviors based on transition weights
+//!
+//! # Safety
+//! This module uses raw pointers to `winit::Window`. They must remain valid while
+//! the manager exists.
+
 use std::time::Instant;
 
 use ggez::winit;
 use log::debug;
 use rand::distr::{weighted::WeightedIndex, Distribution};
 
-/// Types of Behavior
+/// Possible behaviors for the companion character.
+///
+/// Used by [`BehaviorManager`] to determine animations and actions.
+/// - `Idle`: doing nothing
+/// - `WalkLeft` / `WalkRight`: moving horizontally
+/// - `Fall`: fall out from top of the screen, only if companion is at desired position
+/// - `Jump`: self-explanatory
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Behavior {
     Idle,
@@ -14,8 +31,13 @@ pub enum Behavior {
     Jump,
 }
 
-/// BehaviorManager manages companion's behavior by providing functions that return Behavior
-/// depending on various factors
+/// Manages the companion's behavior state.
+///
+/// Tracks the current and previous [`Behavior`] and updates them based on
+/// transition probabilities. Updates occur at intervals to prevent rapid changes.
+///
+/// # Safety
+/// The `window` pointer must remain valid for the lifetime of the manager.
 pub struct BehaviorManager {
     current: Option<Behavior>,
     previous: Option<Behavior>,
@@ -23,10 +45,14 @@ pub struct BehaviorManager {
     window: *const winit::window::Window
 }
 
-/// Simplified type for `TRANSITIONS`
+/// Simplified type for [`TRANSITIONS`]
 type TransitionType = &'static [(Option<Behavior>, &'static [(Behavior, f32)])];
 
-/// Transition chances between Behavior types
+/// Maps a previous [`Behavior`] to weighted probabilities for the next behavior.
+///
+/// Each entry contains:
+/// - An `Option<Behavior>` representing the previous state (or `None` for initial state)
+/// - A slice of `(Behavior, weight)` tuples representing possible next behaviors and their relative probabilities
 static TRANSITIONS: TransitionType = &[
     (
         Some(Behavior::Idle),
@@ -58,15 +84,13 @@ static TRANSITIONS: TransitionType = &[
 ];
 
 impl BehaviorManager {
-    /// Creates a new BehaviorManager. `current` and `previous` are set to None beacause at the
-    /// time when BehaviorManager is constructed (`new()` in CompanionApp, basically the start of
-    /// the program) there's nothing the companion is doing.
+    /// Creates a new [`BehaviorManager'] associated with the companions [`winit::winit::Window`].
     ///
-    /// # Arguments
-    /// * 'window' - Raw const pointer to winit::winit::Window
-    ///
-    /// # Returns
-    /// Created BehaviorManager
+    /// Initially, both `current` and `previous` are None.
+    /// 
+    /// # Safety
+    /// The caller must ensure that the provided [`winit::winit::Window`] pointer is non-null and
+    /// remains valid for the lifetime of the manager
     pub fn new(window: *const winit::window::Window) -> Self {
         Self {
             current: None,
@@ -76,12 +100,13 @@ impl BehaviorManager {
         }
     }
 
-    /// Picks a Behavior for the companion using WeightedIndex and other algorithms
+    /// Updates the companion’s behavior if enough time has passed.
     ///
-    /// # Returns
-    /// Some(Behavior) if current self.current is None (first call) or it's been 10 second since
-    /// the last update
-    /// None otherwise
+    /// Returns `Some(Behavior)` if:
+    /// - this is the first call, or
+    /// - more than 10 seconds have elapsed since the last change.
+    ///
+    /// Otherwise, returns `None`.
     pub fn update(&mut self) -> Option<Behavior> {
         if self.current.is_none() || self.last_change.elapsed().as_secs_f32() > 10.0 {
             self.previous = self.current;
@@ -96,10 +121,9 @@ impl BehaviorManager {
         None
     }
 
-    /// Picks a random Behavior using WeightedIndex
+    /// Selects a random [`Behavior`] according to the transition weights.
     ///
-    /// # Returns
-    /// Selected Behavior
+    /// Called internally by [`update`].
     fn pick_behavior_random(&mut self) -> Behavior {
         let weights = TRANSITIONS
             .iter()
